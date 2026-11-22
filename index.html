@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>À vista ou parcelado?</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --background: #f5f4ef;
+      --surface: #fff;
+      --ink: #242332;
+      --muted: #5d5b69;
+      --border: #dfdce4;
+      --purple: #5d3ab6;
+      --green: #136d5b;
+      --dark: #241b3c;
+      font-family: system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--background); color: var(--ink); }
+    h1, h2, p, dl, dd { margin: 0; }
+    main { width: min(1080px, 100% - 2.5rem); margin: 0 auto; padding: 3.4rem 0; }
+    header { margin-bottom: 2rem; }
+    h1 { font-size: clamp(2rem, 5.5vw, 3.3rem); line-height: 1.05; letter-spacing: -.055em; }
+    header p { margin-top: .65rem; color: var(--muted); line-height: 1.5; }
+    .comparison { display: grid; grid-template-columns: 1fr 1fr; align-items: start; gap: 1.2rem; }
+    .panel { border: 1px solid var(--border); border-radius: 1.2rem; background: var(--surface); }
+    form { min-width: 0; padding: 1.3rem 1.4rem; }
+    fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
+    fieldset + fieldset { margin-top: 1.2rem; }
+    legend { padding: 0; margin-bottom: .7rem; font-size: 1.06rem; font-weight: 700; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; align-items: start; }
+    .field { min-width: 0; }
+    label { display: block; margin-bottom: .34rem; font-size: .83rem; font-weight: 620; }
+    .input { position: relative; }
+    .unit {
+      position: absolute;
+      inset: 0 auto 0 .7rem;
+      display: flex;
+      align-items: center;
+      color: var(--muted);
+      font-size: .88rem;
+      pointer-events: none;
+    }
+    input, select {
+      width: 100%;
+      min-height: 2.7rem;
+      border: 1px solid #ccc8d4;
+      border-radius: .55rem;
+      padding: .56rem .68rem;
+      background: var(--surface);
+      color: var(--ink);
+      font: inherit;
+      font-variant-numeric: tabular-nums;
+    }
+    input::placeholder { color: #6e6a78; font-size: .84rem; }
+    .input:has(.unit:not([hidden])) input { padding-left: 2.35rem; }
+    :focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; }
+    input[aria-invalid="true"] { border-color: #af3447; }
+    input:disabled { background: #f0eef3; }
+    .help { margin-top: .5rem; font-size: .8rem; color: var(--muted); line-height: 1.5; }
+    .check { display: flex; align-items: baseline; gap: .4rem; margin: .5rem 0 0; }
+    .check input { width: auto; min-height: 0; margin: 0; accent-color: var(--purple); }
+    .check label { margin: 0; font-weight: 500; }
+    .return-fields { margin-top: .65rem; }
+    .error { margin-top: .8rem; color: #972437; font-size: .86rem; line-height: 1.5; }
+    details > summary { cursor: pointer; font-weight: 650; }
+    .advanced { margin-top: .65rem; font-size: .83rem; }
+    .advanced summary { color: var(--purple); }
+    .advanced .fields { margin-top: .65rem; }
+
+    .result { min-width: 0; overflow: hidden; }
+    .threshold { padding: 1.55rem 1.6rem; background: var(--dark); color: white; }
+    .threshold h2 { font-size: 1rem; font-weight: 600; color: #e1d8f6; }
+    .threshold-value {
+      margin: .35rem 0 .45rem;
+      font-size: clamp(2rem, 5vw, 3.1rem);
+      line-height: 1.08;
+      font-weight: 760;
+      letter-spacing: -.055em;
+      overflow-wrap: anywhere;
+    }
+    .threshold p:last-child { color: #eee8fa; font-size: .9rem; line-height: 1.5; }
+    .outcome { padding: 1.45rem 1.6rem 1.5rem; }
+    .outcome h2 { font-size: 1.22rem; line-height: 1.3; }
+    .outcome[data-winner="cash"] h2 { color: var(--green); }
+    .outcome[data-winner="installments"] h2 { color: var(--purple); }
+    .outcome > p { margin-top: .4rem; color: var(--muted); line-height: 1.5; font-size: .9rem; }
+    .numbers { margin-top: 1rem; }
+    .numbers div { display: flex; justify-content: space-between; gap: .6rem; border-top: 1px solid var(--border); padding: .68rem 0; }
+    .numbers div:last-child { padding-bottom: 0; }
+    .numbers dt { font-size: .87rem; }
+    .numbers dd { font-weight: 680; font-size: .9rem; text-align: right; overflow-wrap: anywhere; min-width: 0; }
+    .placeholder { padding: 1.45rem 1.6rem; color: var(--muted); line-height: 1.5; }
+
+    .projection { margin-top: 1.2rem; padding: 1rem 1.4rem; }
+    .projection p { margin-top: .55rem; }
+    .chart-key { display: flex; gap: 1.2rem; margin: .9rem 0 0; font-size: .82rem; }
+    .chart-key span::before { content: ""; display: inline-block; width: 1rem; border-top: 3px solid var(--green); vertical-align: middle; margin-right: .4rem; }
+    .chart-key span + span::before { border-top: 3px dashed var(--purple); }
+    canvas { display: block; width: 100%; height: 195px; }
+    .balance-table { margin-top: .5rem; font-size: .86rem; }
+    table { width: 100%; margin-top: .6rem; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: .5rem .4rem; text-align: right; border-bottom: 1px solid var(--border); }
+    th:first-child, td:first-child { text-align: left; }
+    .assumptions { max-width: 73ch; margin-top: 1rem; }
+
+    @media (max-width: 730px) {
+      main { padding: 2rem 0; }
+      .comparison { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 375px) {
+      main { width: calc(100% - 1.5rem); }
+      form, .threshold, .outcome, .projection { padding-left: .95rem; padding-right: .95rem; }
+      .fields { gap: .5rem; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>À vista ou parcelado?</h1>
+      <p>Descubra a partir de qual desconto vale a pena pagar à vista.</p>
+    </header>
+
+    <div class="comparison">
+      <form id="calculator" class="panel" aria-label="Condições da compra" autocomplete="off">
+        <fieldset>
+          <legend>Pagamento à vista</legend>
+          <div class="fields">
+            <div class="field">
+              <label for="price">Preço sem desconto</label>
+              <div class="input"><span class="unit" aria-hidden="true">R$</span><input id="price" inputmode="decimal" value="1.000,00"></div>
+            </div>
+            <div class="field">
+              <label id="offer-label" for="offer">Desconto à vista</label>
+              <div class="input"><span class="unit" id="offer-unit" aria-hidden="true">%</span><input id="offer" inputmode="decimal" value="5"></div>
+            </div>
+          </div>
+          <div class="check">
+            <input id="price-mode" type="checkbox">
+            <label for="price-mode">Informar o preço à vista em reais</label>
+          </div>
+        </fieldset>
+
+        <fieldset>
+          <legend>Pagamento parcelado</legend>
+          <div class="fields">
+            <div class="field">
+              <label for="months">Número de parcelas</label>
+              <input id="months" inputmode="numeric" value="10">
+            </div>
+            <div class="field">
+              <label for="payment">Valor da parcela</label>
+              <div class="input"><span class="unit" aria-hidden="true">R$</span><input id="payment" inputmode="decimal" placeholder="Opcional" aria-describedby="payment-help"></div>
+            </div>
+          </div>
+          <p class="help" id="payment-help">Informe o valor oferecido pela loja ou deixe em branco para calcular a parcela.</p>
+          <details class="advanced">
+            <summary>Entrada e juros do parcelamento</summary>
+            <div class="fields">
+              <div class="field">
+                <label for="down">Valor da entrada</label>
+                <div class="input"><span class="unit" aria-hidden="true">R$</span><input id="down" inputmode="decimal" placeholder="0,00"></div>
+              </div>
+              <div class="field">
+                <label for="interest">Juros ao mês</label>
+                <div class="input"><span class="unit" aria-hidden="true">%</span><input id="interest" inputmode="decimal" placeholder="0" aria-describedby="interest-help"></div>
+              </div>
+            </div>
+            <p class="help" id="interest-help">A taxa de juros é usada para calcular a parcela quando o valor dela está em branco.</p>
+          </details>
+        </fieldset>
+
+        <fieldset>
+          <legend>Rendimento do dinheiro</legend>
+          <label for="investment">Tipo de rendimento</label>
+          <select id="investment">
+            <option value="cdi">100% do CDI</option>
+            <option value="custom">Taxa líquida personalizada</option>
+            <option value="none">Sem rendimento</option>
+          </select>
+          <div id="cdi-fields">
+            <p class="help" id="cdi-status" role="status"></p>
+            <div class="check">
+              <input id="cdi-tax" type="checkbox" checked>
+              <label for="cdi-tax">Aplicar IR regressivo (CDB/RDB)</label>
+            </div>
+          </div>
+          <div id="custom-fields" class="return-fields" hidden>
+            <div class="fields">
+              <div class="field">
+                <label for="return">Rendimento líquido</label>
+                <div class="input"><span class="unit" aria-hidden="true">%</span><input id="return" inputmode="decimal" placeholder="0" aria-describedby="return-help"></div>
+              </div>
+              <div class="field">
+                <label for="period">Período da taxa</label>
+                <select id="period">
+                  <option value="annual">Ao ano</option>
+                  <option value="monthly">Ao mês</option>
+                </select>
+              </div>
+            </div>
+            <p class="help" id="return-help">Informe o rendimento após impostos e taxas.</p>
+          </div>
+        </fieldset>
+        <p class="error" id="error" role="status" hidden></p>
+      </form>
+
+      <section class="panel result" aria-labelledby="threshold-title">
+        <div class="threshold">
+          <h2 id="threshold-title">Desconto à vista para empatar</h2>
+          <p class="threshold-value" id="threshold-value">—</p>
+          <p id="threshold-detail">Com esse desconto, as duas opções têm o mesmo custo.</p>
+        </div>
+        <div class="outcome" id="outcome" hidden>
+          <h2 id="winner"></h2>
+          <p id="verdict" role="status" aria-atomic="true"></p>
+          <dl class="numbers">
+            <div><dt>Oferta à vista</dt><dd id="cash-offer"></dd></div>
+            <div><dt>Valor presente do parcelamento</dt><dd id="installment-value"></dd></div>
+            <div><dt>Condições do parcelamento</dt><dd id="plan"></dd></div>
+            <div><dt>Total a pagar no parcelamento</dt><dd id="installment-total"></dd></div>
+          </dl>
+        </div>
+        <p class="placeholder" id="placeholder">Preencha os dados da compra para comparar as opções.</p>
+      </section>
+    </div>
+
+    <details class="panel projection" id="projection" hidden>
+      <summary>Projeção do saldo mês a mês</summary>
+      <p class="help">O saldo inicial é o preço sem desconto. Cada linha mostra quanto sobra depois dos pagamentos, com o rendimento líquido da aplicação.</p>
+      <div class="chart-key" aria-hidden="true"><span>À vista</span><span>Parcelado</span></div>
+      <canvas id="chart" aria-hidden="true"></canvas>
+      <details class="balance-table">
+        <summary>Ver saldos mensais</summary>
+        <table aria-label="Saldos mensais após os pagamentos">
+          <thead><tr><th scope="col">Mês</th><th scope="col">À vista</th><th scope="col">Parcelado</th></tr></thead>
+          <tbody id="balances"></tbody>
+        </table>
+      </details>
+    </details>
+    <p class="help assumptions">A simulação mantém a taxa constante, considera a entrada hoje e a primeira parcela em 30 dias. Para o CDI, considera uma aplicação com liquidez diária feita hoje e 21 dias úteis por mês.</p>
+    <noscript><p class="error">Ative o JavaScript no navegador para usar o simulador.</p></noscript>
+  </main>
+
+  <script>
+    "use strict";
+
+    const get = id => document.getElementById(id);
+    const form = get("calculator");
+    const projection = get("projection");
+    const chart = get("chart");
+    const moneyFormat = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+    const compactFormat = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" });
+    const percentFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2, minimumFractionDigits: 2 });
+    const offerPercentFormat = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 12, useGrouping: false });
+    const cdiEndpoint = "https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados/ultimos/1?formato=json";
+    const cdiCacheKey = "cash-or-installments.cdi";
+    const referenceCdi = { date: "19/11/2026", dailyRate: 0.050788 };
+    const dateKey = date => date.split("/").reverse().join("");
+    let cdi = loadCachedCdi();
+    let balances = [];
+    let fieldWithError;
+
+    function asMoney(value) {
+      return moneyFormat.format(Math.abs(value) < 0.005 ? 0 : value);
+    }
+
+    function asPercent(value) {
+      return percentFormat.format(Math.abs(value) < 0.005 ? 0 : value) + "%";
+    }
+
+    function isCdiQuote(quote) {
+      return quote && /^\d{2}\/\d{2}\/\d{4}$/.test(quote.date) &&
+        Number.isFinite(quote.dailyRate) && quote.dailyRate >= 0 && quote.dailyRate < 100;
+    }
+
+    function loadCachedCdi() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(cdiCacheKey));
+        if (isCdiQuote(saved) && dateKey(saved.date) >= dateKey(referenceCdi.date)) return saved;
+      } catch {
+        // Local file storage may be unavailable in some browsers.
+      }
+      return referenceCdi;
+    }
+
+    function showCdiStatus(message) {
+      const annualRate = Math.expm1(Math.log1p(cdi.dailyRate / 100) * 252) * 100;
+      get("cdi-status").textContent = "CDI de " + cdi.date + " · " + asPercent(annualRate) + " a.a. bruto. " + message;
+    }
+
+    async function refreshCdi() {
+      showCdiStatus("Consultando o Banco Central…");
+      try {
+        const response = await fetch(cdiEndpoint, {
+          cache: "no-store",
+          credentials: "omit",
+          referrerPolicy: "no-referrer",
+          signal: AbortSignal.timeout(5000)
+        });
+        if (!response.ok) throw new Error("CDI request failed");
+        const [latest] = await response.json();
+        const quote = { date: latest?.data, dailyRate: parseNumber(latest?.valor ?? "") };
+        if (!isCdiQuote(quote) || dateKey(quote.date) < dateKey(cdi.date)) throw new Error("Invalid or outdated CDI quote");
+        cdi = quote;
+        try {
+          localStorage.setItem(cdiCacheKey, JSON.stringify(cdi));
+        } catch {
+          // The reference quote is still available offline.
+        }
+        showCdiStatus("Dados do Banco Central do Brasil.");
+        update();
+      } catch {
+        showCdiStatus("Usando a cotação salva. A atualização está indisponível.");
+      }
+    }
+
+    function parseNumber(raw, currency = false) {
+      const text = raw.trim().replace(/^R\$\s*/i, "").replace(/\s*%$/, "");
+      if (/^[+-]?\d+$/.test(text)) return Number(text);
+      const dot = text.lastIndexOf(".");
+      const comma = text.lastIndexOf(",");
+      const decimal = comma > dot ? "," : ".";
+      const group = decimal === "," ? "." : ",";
+      if (currency && !(dot >= 0 && comma >= 0) && /^[+-]?[1-9]\d{0,2}([.,]\d{3})+$/.test(text)) {
+        return Number(text.replaceAll(decimal, ""));
+      }
+      const parts = text.split(decimal);
+      if (parts.length !== 2 || !/^\d+$/.test(parts[1])) return NaN;
+      const integer = parts[0];
+      if (integer.includes(group)) {
+        const groups = integer.split(group);
+        const first = groups.shift();
+        if (!/^[+-]?\d{1,3}$/.test(first) || groups.some(part => !/^\d{3}$/.test(part))) return NaN;
+      } else if (!/^[+-]?\d*$/.test(integer)) {
+        return NaN;
+      }
+      return Number(integer.replaceAll(group, "") + "." + parts[1]);
+    }
+
+    function cents(value) {
+      // Shift the decimal exponent before rounding values that land on a half cent.
+      const [digits, exponent = "0"] = value.toString().split("e");
+      return Math.round(Number(digits + "e" + (Number(exponent) + 2)));
+    }
+
+    function discountedPrice(price, discount) {
+      return Math.round(cents(price) * (100 - discount) / 100) / 100;
+    }
+
+    function read(id, message, { min = 0, max = Infinity, optional = false, currency = false, integer = false } = {}) {
+      const field = get(id);
+      const raw = field.value.trim();
+      if (optional && !raw) return 0;
+      const value = integer && !/^\d+$/.test(raw) ? NaN : parseNumber(raw, currency);
+      if (!Number.isFinite(value) || value < min || value > max ||
+          (currency && !Number.isSafeInteger(cents(value)))) {
+        fieldWithError = field;
+        throw new RangeError(message);
+      }
+      return currency ? cents(value) / 100 : value;
+    }
+
+    function annuityFactor(logGrowth, months) {
+      if (logGrowth === 0) return months;
+      return -Math.expm1(-logGrowth * months) / Math.expm1(logGrowth);
+    }
+
+    function investmentTaxRate(month) {
+      if (month <= 6) return 0.225;
+      if (month <= 12) return 0.20;
+      if (month <= 24) return 0.175;
+      return 0.15;
+    }
+
+    function calculate({ price, cash, months, down, payment, loanRate, monthlyLogGrowth, taxed }) {
+      const paymentAmount = payment ?? (price - down) / annuityFactor(Math.log1p(loanRate / 100), months);
+      const total = down + paymentAmount * months;
+      const points = [{ cash: price - cash, installments: price - down }];
+      let installmentValue = down;
+      for (let month = 1; month <= months; month += 1) {
+        const logGrowth = monthlyLogGrowth * month;
+        const multiplier = taxed
+          ? 1 + Math.expm1(logGrowth) * (1 - investmentTaxRate(month))
+          : Math.exp(logGrowth);
+        // Discount each payment by the net proceeds from one real invested today.
+        installmentValue += paymentAmount === 0 ? 0 : paymentAmount / multiplier;
+        points.push({ cash: (price - cash) * multiplier, installments: (price - installmentValue) * multiplier });
+      }
+      return { paymentAmount, installmentValue, total, points };
+    }
+
+    function drawChart() {
+      if (!projection.open || projection.hidden || balances.length < 2) return;
+      const { width, height } = chart.getBoundingClientRect();
+      if (!width || !height) return;
+      const ratio = window.devicePixelRatio || 1;
+      chart.width = Math.round(width * ratio);
+      chart.height = Math.round(height * ratio);
+      const ctx = chart.getContext("2d");
+      if (!ctx) return;
+      ctx.scale(ratio, ratio);
+      ctx.font = "11px system-ui";
+      const values = balances.flatMap(point => [point.cash, point.installments]);
+      const low = Math.min(0, ...values);
+      const high = Math.max(1, ...values);
+      const left = Math.max(ctx.measureText(compactFormat.format(low)).width, ctx.measureText(compactFormat.format(high)).width) + 12;
+      const right = width - 16;
+      const top = 16;
+      const bottom = height - 25;
+      const last = balances.length - 1;
+      const x = month => left + month / last * (right - left);
+      const y = value => bottom - (value - low) / (high - low) * (bottom - top);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#5d5b69";
+      for (let tick = 0; tick <= 4; tick += 1) {
+        const value = low + (high - low) * tick / 4;
+        ctx.strokeStyle = "#e4e1e8";
+        ctx.beginPath();
+        ctx.moveTo(left, y(value));
+        ctx.lineTo(right, y(value));
+        ctx.stroke();
+        ctx.fillText(compactFormat.format(value), left - 7, y(value));
+      }
+      ctx.textAlign = "left";
+      ctx.fillText("Mês 0", left, height - 8);
+      ctx.textAlign = "right";
+      ctx.fillText("Mês " + last, right, height - 8);
+      ctx.lineWidth = 2.5;
+      for (const [series, color, dash] of [["cash", "#136d5b", []], ["installments", "#5d3ab6", [6, 4]]]) {
+        ctx.strokeStyle = color;
+        ctx.setLineDash(dash);
+        ctx.beginPath();
+        ctx.moveTo(x(0), y(balances[0][series]));
+        balances.slice(1).forEach((point, index) => ctx.lineTo(x(index + 1), y(point[series])));
+        ctx.stroke();
+      }
+    }
+
+    function renderBalances() {
+      const rows = balances.map((point, month) => {
+        const row = document.createElement("tr");
+        for (const value of [month, asMoney(point.cash), asMoney(point.installments)]) {
+          row.insertCell().textContent = value;
+        }
+        return row;
+      });
+      get("balances").replaceChildren(...rows);
+      drawChart();
+    }
+
+    function update() {
+      if (fieldWithError) fieldWithError.removeAttribute("aria-invalid");
+      fieldWithError = undefined;
+      const quoteEntered = get("payment").value.trim() !== "";
+      get("interest").disabled = quoteEntered;
+      const investment = get("investment").value;
+      get("cdi-fields").hidden = investment !== "cdi";
+      get("custom-fields").hidden = investment !== "custom";
+      try {
+        const price = read("price", "Informe um preço de pelo menos R$ 0,01.", { min: 0.01, currency: true });
+        const cashMode = get("price-mode").checked;
+        const offer = cashMode
+          ? read("offer", "Informe um preço à vista válido em reais.", { currency: true })
+          : read("offer", "Informe um desconto à vista entre 0% e 100%.", { max: 100, optional: true });
+        const cash = cashMode ? offer : discountedPrice(price, offer);
+        const months = read("months", "Informe um número inteiro de parcelas entre 1 e 600.", { min: 1, max: 600, integer: true });
+        const payment = quoteEntered ? read("payment", "Informe um valor de parcela válido em reais.", { currency: true }) : undefined;
+        const down = read("down", quoteEntered ? "Informe um valor de entrada válido em reais." : "Informe uma entrada entre zero e o preço da compra.", { max: quoteEntered ? Infinity : price, optional: true, currency: true });
+        const loanRate = quoteEntered ? 0 : read("interest", "Informe uma taxa de juros mensal de 0% ou mais.", { optional: true });
+        let monthlyLogGrowth = 0;
+        if (investment === "cdi") {
+          monthlyLogGrowth = Math.log1p(cdi.dailyRate / 100) * 21;
+        } else if (investment === "custom") {
+          const returnRate = read("return", "Informe um rendimento líquido maior que −100%.", { min: -100 + 1e-12, optional: true });
+          monthlyLogGrowth = Math.log1p(returnRate / 100) / (get("period").value === "annual" ? 12 : 1);
+        }
+        const { paymentAmount, installmentValue, total, points } = calculate({
+          price, cash, months, down, payment, loanRate, monthlyLogGrowth, taxed: investment === "cdi" && get("cdi-tax").checked
+        });
+        if (![paymentAmount, installmentValue, total].every(value => Number.isSafeInteger(cents(value))) ||
+            points.some(point => !Number.isFinite(point.cash) || !Number.isFinite(point.installments))) {
+          throw new RangeError("Informe valores menores para simular a compra.");
+        }
+        const breakEvenCents = cents(installmentValue);
+        const priceCents = cents(price);
+        const breakEvenPrice = asMoney(breakEvenCents / 100);
+        const difference = breakEvenCents - cents(cash);
+        const discount = (priceCents - breakEvenCents) / priceCents * 100;
+        const offeredDiscount = (price - cash) / price * 100;
+        const winner = difference > 0 ? "cash" : difference < 0 ? "installments" : "tie";
+        const neededDiscount = breakEvenCents > priceCents
+          ? "Sem necessidade de desconto"
+          : (discount > 0 ? "≈ " : "") + asPercent(discount);
+        get("threshold-value").textContent = neededDiscount;
+        get("threshold-detail").textContent = "Com um preço abaixo de " + breakEvenPrice + ", pagar à vista sai mais barato.";
+        get("outcome").dataset.winner = winner;
+        get("winner").textContent = { cash: "Pagar à vista vale mais a pena", installments: "Parcelar vale mais a pena", tie: "As duas opções têm o mesmo custo" }[winner];
+        get("verdict").textContent = difference === 0
+          ? "A oferta à vista coincide com o valor presente do parcelamento."
+          : "Economia de " + asMoney(Math.abs(difference) / 100) + " em valores de hoje.";
+        const offerDetail = offeredDiscount >= 0
+          ? asPercent(offeredDiscount) + " de desconto"
+          : asPercent(-offeredDiscount) + " acima do preço sem desconto";
+        get("cash-offer").textContent = asMoney(cash) + " · " + offerDetail;
+        get("installment-value").textContent = breakEvenPrice;
+        get("plan").textContent = (down ? asMoney(down) + " de entrada + " : "") + months + " × " + asMoney(paymentAmount);
+        get("installment-total").textContent = asMoney(total);
+        get("error").hidden = true;
+        get("placeholder").hidden = true;
+        get("outcome").hidden = false;
+        projection.hidden = false;
+        balances = points;
+        if (projection.open) renderBalances();
+      } catch (error) {
+        if (!(error instanceof RangeError)) throw error;
+        if (fieldWithError) {
+          fieldWithError.setAttribute("aria-invalid", "true");
+          if (fieldWithError.closest(".advanced")) fieldWithError.closest(".advanced").open = true;
+        }
+        get("error").textContent = error.message;
+        get("error").hidden = false;
+        get("threshold-value").textContent = "—";
+        get("threshold-detail").textContent = "Com esse desconto, as duas opções têm o mesmo custo.";
+        get("outcome").hidden = true;
+        get("placeholder").hidden = false;
+        projection.hidden = true;
+      }
+    }
+
+    get("price-mode").addEventListener("input", event => {
+      const cashMode = event.target.checked;
+      const price = parseNumber(get("price").value, true);
+      const offer = get("offer");
+      const prior = offer.value.trim() ? parseNumber(offer.value, !cashMode) : cashMode ? 0 : NaN;
+      const converted = cashMode ? discountedPrice(price, prior) : (1 - prior / price) * 100;
+      const formatter = cashMode ? percentFormat : offerPercentFormat;
+      offer.value = Number.isFinite(converted) && price > 0 && converted >= 0
+        ? formatter.format(converted) : "";
+      get("offer-label").textContent = cashMode ? "Preço à vista" : "Desconto à vista";
+      get("offer-unit").textContent = cashMode ? "R$" : "%";
+    });
+
+    form.addEventListener("input", update);
+    form.addEventListener("submit", event => event.preventDefault());
+    projection.addEventListener("toggle", () => {
+      if (projection.open && !projection.hidden) renderBalances();
+    });
+    new ResizeObserver(drawChart).observe(chart);
+    update();
+    refreshCdi();
+  </script>
+</body>
+</html>
